@@ -1,0 +1,69 @@
+---
+title: Python and R
+author: 'Kim Tran'
+date: '2021-05-09'
+slug: python-and-r
+categories: []
+tags: []
+description: ''
+---
+I recently learned Python in SDS348. Python is a programming language similar to R, but has various differences including better software for neural nets, better deployment of scale/pipelines, and quicker speed. These are some examples of python code!
+
+```{python}
+list1=[1,2,3,4] 
+list2=['a','b','c','d']
+list1[0]
+list2[-1]
+list2[::2]
+```   
+
+```{python}
+for i in range(5):
+ print(i)
+for letter in "abcdefg":
+ print(letter)
+mylist = [1, 2, 3, 4]
+for i in mylist:
+ print(i)
+for letter in "abcdefg":
+ print(letter)
+i= 1
+while i < 11:
+ print(2**i)
+ i+=1
+def add_one(x):
+ return x+1
+add_one(2)
+```
+
+```{python}
+import numpy as np
+x=np.array([1,2,3])
+x
+print(x/2+1)
+x.shape
+mat1=np.array([[1,2],[3,4]])
+mat1
+```
+
+
+The Reticulate package lets R and Python interact with each other by sharing code across R and Python as shown below!
+```{R}
+#R code chunk
+library(reticulate)
+really<-"very"
+```
+
+```{python}
+#Python code chunk
+really="happy"
+print(r.really,really)
+```  
+```{R}
+#R code chunk
+cat(c(really,py$really))
+```
+
+This is a picture of my dog, Juno!
+![](/post/2021-05-09-python-and-r_files/juno.jpeg)
+
