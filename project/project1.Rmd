@@ -1,6 +1,8 @@
+---
 title: 'Project 1: Exploratory Data Analysis'
 author: "Thien Kim Tran, ttt2249"
 date: "2021-04-04"
+---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
