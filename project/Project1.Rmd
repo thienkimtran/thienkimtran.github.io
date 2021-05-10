@@ -1,0 +1,141 @@
+title: 'Project 1: Exploratory Data Analysis'
+author: "Thien Kim Tran, ttt2249"
+date: "2021-04-04"
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", 
+    warning = F, message = F, tidy = TRUE, tidy.opts = list(width.cutoff = 60), 
+    R.options = list(max.print = 100))
+```
+
+## Introduction 
+This following year, I'm going to be teaching elementary school in Houston as a part of the Teach for America 2021 Corps. Teach for America is a program that enlists graduates to teach at low income public schools in America to help bridge the gap of educational inequity and expand opportunities for children. I was interested in investigating whether there was a correlation of state spending on public education on Fall enrollment in a degree-granting institution. 
+
+The dataset "College1" from the National Center of Educational Statistics contains information about fall enrollment of students in degree-granting institutions by state and further breaks down the number of students enrolled by race/ethnicity. The dataset "education" from the carData States data frame contains the region, population, SAT scores on the verbal and mathematics component, the percentage of graduating high school students, the amount of state spending on public education in $1000s per student, and the average teacher's salary in the state in $1000s. 
+
+```{R}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+
+setwd('/home/ttt2249/website/content/project')
+Education <- read_csv("Education.csv") 
+College <- read_csv("College1.csv")
+```
+
+## Tidying: Rearranging Wide/Long 
+
+```{R}
+College_wider <- College %>% pivot_wider(names_from= "States", values_from= "Total")
+head(College_wider)
+
+Education_wider <- Education %>% pivot_wider(names_from = "States", values_from ="pop")
+head(Education_wider)
+```
+My data sets were already tidy, so I used the pivot_wider function, which widens the data by increasing columns and decreasing rows as seen in "College_wider" and "Education_wider". Both of these data sets expanded columns by separating out individual states per column to widen the dataset.  
+
+## Joining/Merging
+
+```{R}
+joindata <- left_join(Education, College, by="States") %>% glimpse()
+```
+I joined the dataset "Education" and "College" together by using a left join with their common variable "States".
+
+## Wrangling
+```{R}
+joindata%>%filter(region=="SA")%>%group_by(region)%>%summarize_if(is.numeric, mean, na.rm= T)
+joindata%>%arrange(Total)
+joindata%>%select_if(is.numeric)%>%na.omit%>%cor
+joindata%>%mutate(dollars=ntile(pop,1000))%>%arrange(desc(dollars))%>%select(States, dollars)
+joindata%>%summarize_all(n_distinct)
+joindata%>%group_by(region)%>%summarize_if(is.numeric, mean, na.rm=T)
+joindata%>%group_by(region)%>%summarize_if(is.numeric, sd, na.rm=T)
+
+joindata%>%summarize_if(is.numeric, mean, na.rm=T)
+joindata%>%summarize_if(is.numeric, sd, na.rm=T)
+joindata%>%summarize_if(is.numeric, min, na.rm=T)
+joindata%>%summarize_if(is.numeric, max, na.rm=T)
+joindata%>%summarize_if(is.numeric, var, na.rm=T)
+```
+The filter function is sorted by the region 'SA'. The arrange function is sorted from least to greatest organized by 'Total'. The select function sorted by numerical values. The summarize function identifies distinct values for each column. The group by function sorted by a categorical 'Region' to list the mean and standard deviations of each column.  
+
+The mean values for all numeric values are: 4876.467 people for 'pop', 448.1569 for 'SATV', 497.3922 for 'SATM', 33.7451% for 'percent', $5,175.49 per student for 'dollars', $30,941.18 for 'pay', and 374260.3 people for 'Total'.
+The standard deviations for all numeric values are: 5439.203 people for 'pop', 30.82101 for 'SATV', 34.56882 for 'SATM', 24.07392% for 'percent', $1,376.166 per student for 'dollars', and $5,308.151 for 'pay', and 440782.2 people for 'Total'.
+The minimum for all numeric values are: 454 people for 'pop', 397 for 'SATV', 437 for 'SATM', 4% for 'percent', $2,993 per student for 'dollars', $22,000 for 'pay', and 30717 people for 'Total'.
+The maximum for all numeric values are: 29760 people for 'pop', 511 for 'SATV', 577 for 'SATM', 97% for 'percent', $9,159 per student for 'dollars', $43,000 for 'pay', and 2652241 people for 'Total'.
+The variance for all numeric values are: 29584926 people for 'pop', 949.9349 for 'SATV', 1195.003 for 'SATM', 579.5537% for 'percent', $1,893.833 per student for 'dollars', $28,176.47 for 'pay', and 194288932203 people for 'Total'.
+The number of distinct values for all numeric values are: 51 for 'pop', 42 for 'SATV', 40 for 'SATM', 37 for 'percent', 51 for 'dollars', 20 for 'pay', and 51 for 'Total'. 
+
+## Visualizing
+```{R}
+joindata%>%ggplot(aes(x= SATV, y= SATM, color= region)) +
+  geom_point(size=2) +
+  ggtitle("Average SAT Verbal and SAT Math Scores by Region") +
+  xlab("Average Scores on the Verbal SAT") +
+  ylab("Average Scores on the Math SAT")
+
+joindata%>%ggplot(aes(x= region, fill= pop)) +
+  geom_bar(aes(y= dollars), stat = "summary", fun.y="mean") +
+  ggtitle("State Spending on Public Education per Student by Region") +
+  ylab("Average Cost of Spending ($1000's)") +
+  xlab("Region")
+
+joindata%>%ggplot(aes(x= region, fill= pop)) +
+  geom_bar(aes(y= Total), stat = "summary", fun.y= "mean") +
+  ggtitle("Fall Enrollment in Degree-Granting Institutions by Region") +
+  ylab("Fall Enrollment in Degree-Granting Institutions") +
+  xlab("Region")
+
+ joindata%>%ggplot(aes(x= dollars, y= Total, color= region)) +
+  geom_point(size=2) +
+  ggtitle("State Spending on Public Education and Fall Enrollment in Degree-Granting Institutions by Region") +
+  xlab("Average Cost of Spending ($1000's)") +
+  ylab("Fall Enrollment in Degree-Granting Institutions")
+```
+
+The first plot compares the variables 'SATV' and 'SATM' by 'Region'. The graph shows the highest average scores on the Math and Verbal SAT was from the WNC region, while the lowest average scores on the Math and Verbal SAT was from the SA region. There is a positive correlation, which means students that had higher average scores on the Verbal SAT would have higher average scores on the Math SAT and students that had lower average scores on the Verbal SAT would have lower average scores on the Math SAT.
+
+The second plot shows the average cost of state spending on public education per student by region. From the graph, it appears that the region MA has the greatest state spending on public education of about $8,000 per student, while the region ESC has the lowest state spending of about $3,700 per student. 
+
+The third plot shows the fall enrollment of students in degree-granting institutions by region. From the graph, it appears that the region MA has the highest fall enrollment of students, while the region NE has the lowest fall enrollment of 4x less than the region MA.
+
+The fourth plot shows state spending on public education per student by fall enrollment of students in degree-granting institutions to determine whether there is a correlation between enrollment on state spending on public education during K-12. The graph shows there is a slight positive correlation. The region MA had the greatest state spending and the highest fall enrollment. 
+
+## Dimensionality Reduction
+```{R}
+joindata%>%select_if(is.numeric)%>%scale%>%cov%>%round(2)
+education_nums <- joindata%>%select_if(is.numeric)%>%scale()
+education_pca <- princomp(education_nums)
+names(education_pca)
+summary(education_pca, loadings = T)
+
+eig <- education_pca$sdev^2
+varprop=round(eig/sum(eig), 2)
+
+ggplot()+geom_bar(aes(y=varprop,x=1:13),stat="identity")+xlab("")+geom_path(aes(y=varprop,x=1:13))+
+  geom_text(aes(x=1:13,y=varprop,label=round(varprop,2)),vjust=1,col="white",size=4)+
+  scale_y_continuous(labels = scales::percent)+
+  scale_x_continuous(breaks=1:13)
+eig[1:13]
+
+round(cumsum(eig)/sum(eig),2)
+eig
+eigen(cor(education_nums))
+
+pca_1 <- princomp(education_nums)
+summary(pca_1, loadings = T)
+
+education_pca$loadings[1:7,1:2]%>%
+  as.data.frame%>%
+  rownames_to_column%>%
+  ggplot() + geom_hline(aes(yintercept=0),lty=2) + 
+  geom_vline(aes(xintercept=0),lty=2) +
+  ylab("PC2")+xlab("PC1") + 
+  geom_segment(aes(x=0,y=0,xend=Comp.1,yend=Comp.2),arrow = arrow(), col="blue") +
+  geom_label(aes(x=Comp.1*1.1,y=Comp.2*1.1,label=rowname)) +
+  ggtitle("PCA Loadings Plot")
+```
+
+Three PCs can summarize 87% of the total variability. From the graph, PC1 and PC2 account for 80% of the total variance. PC1 explained 54% of the total variance. There are only two eigenvalues greater than 1. From the PCA loadings plot, 'Total' and 'pop' affects PC1 the most and 'SATV' and 'SATM' affects PC2 the most. There is a negative correlation of 'dollars', 'percent', and 'pay' with PC1. 

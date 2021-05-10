@@ -1,0 +1,457 @@
+
+
+
+<p>title: ‘Project 1: Exploratory Data Analysis’
+author: “Thien Kim Tran, ttt2249”
+date: “2021-04-04”</p>
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>This following year, I’m going to be teaching elementary school in Houston as a part of the Teach for America 2021 Corps. Teach for America is a program that enlists graduates to teach at low income public schools in America to help bridge the gap of educational inequity and expand opportunities for children. I was interested in investigating whether there was a correlation of state spending on public education on Fall enrollment in a degree-granting institution.</p>
+<p>The dataset “College1” from the National Center of Educational Statistics contains information about fall enrollment of students in degree-granting institutions by state and further breaks down the number of students enrolled by race/ethnicity. The dataset “education” from the carData States data frame contains the region, population, SAT scores on the verbal and mathematics component, the percentage of graduating high school students, the amount of state spending on public education in $1000s per student, and the average teacher’s salary in the state in $1000s.</p>
+<pre class="r"><code>library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+
+setwd(&quot;/home/ttt2249/website/content/project&quot;)
+Education &lt;- read_csv(&quot;Education.csv&quot;)
+College &lt;- read_csv(&quot;College1.csv&quot;)</code></pre>
+</div>
+<div id="tidying-rearranging-widelong" class="section level2">
+<h2>Tidying: Rearranging Wide/Long</h2>
+<pre class="r"><code>College_wider &lt;- College %&gt;% pivot_wider(names_from = &quot;States&quot;, 
+    values_from = &quot;Total&quot;)
+head(College_wider)</code></pre>
+<pre><code>## # A tibble: 6 x 57
+##    White  Black Hispanic `Asian/Pacific … `American India… `Non-resident A…
+##    &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;
+## 1 2.00e5  90446     7066             5198             2536             5858
+## 2 2.14e4   1041     1276             1837             4329              842
+## 3 4.30e5 101276   106780            25489            20032            20799
+## 4 1.15e5  29981     5277             2795             1805             3677
+## 5 1.07e6 216554   764410           491873            24635            88384
+## 6 2.40e5  22548    38204            12967             4776             7018
+## # … with 51 more variables: AL &lt;dbl&gt;, AK &lt;dbl&gt;, AZ &lt;dbl&gt;, AR &lt;dbl&gt;, CA &lt;dbl&gt;,
+## #   CO &lt;dbl&gt;, CN &lt;dbl&gt;, DE &lt;dbl&gt;, DC &lt;dbl&gt;, FL &lt;dbl&gt;, GA &lt;dbl&gt;, HI &lt;dbl&gt;,
+## #   ID &lt;dbl&gt;, IL &lt;dbl&gt;, IN &lt;dbl&gt;, IA &lt;dbl&gt;, KS &lt;dbl&gt;, KY &lt;dbl&gt;, LA &lt;dbl&gt;,
+## #   ME &lt;dbl&gt;, MD &lt;dbl&gt;, MA &lt;dbl&gt;, MI &lt;dbl&gt;, MN &lt;dbl&gt;, MS &lt;dbl&gt;, MO &lt;dbl&gt;,
+## #   MT &lt;dbl&gt;, NE &lt;dbl&gt;, NV &lt;dbl&gt;, NH &lt;dbl&gt;, NJ &lt;dbl&gt;, NM &lt;dbl&gt;, NY &lt;dbl&gt;,
+## #   NC &lt;dbl&gt;, ND &lt;dbl&gt;, OH &lt;dbl&gt;, OK &lt;dbl&gt;, OR &lt;dbl&gt;, PA &lt;dbl&gt;, RI &lt;dbl&gt;,
+## #   SC &lt;dbl&gt;, SD &lt;dbl&gt;, TN &lt;dbl&gt;, TX &lt;dbl&gt;, UT &lt;dbl&gt;, VT &lt;dbl&gt;, VA &lt;dbl&gt;,
+## #   WA &lt;dbl&gt;, WV &lt;dbl&gt;, WI &lt;dbl&gt;, WY &lt;dbl&gt;</code></pre>
+<pre class="r"><code>Education_wider &lt;- Education %&gt;% pivot_wider(names_from = &quot;States&quot;, 
+    values_from = &quot;pop&quot;)
+head(Education_wider)</code></pre>
+<pre><code>## # A tibble: 6 x 57
+##   region  SATV  SATM percent dollars   pay    AL    AK    AZ    AR    CA    CO
+##   &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 ESC      470   514       8    3.65    27  4041    NA    NA    NA    NA    NA
+## 2 PAC      438   476      42    7.89    43    NA   550    NA    NA    NA    NA
+## 3 MTN      445   497      25    4.23    30    NA    NA  3665    NA    NA    NA
+## 4 WSC      470   511       6    3.33    23    NA    NA    NA  2351    NA    NA
+## 5 PAC      419   484      45    4.83    39    NA    NA    NA    NA 29760    NA
+## 6 MTN      456   513      28    4.81    31    NA    NA    NA    NA    NA  3294
+## # … with 45 more variables: CN &lt;dbl&gt;, DE &lt;dbl&gt;, DC &lt;dbl&gt;, FL &lt;dbl&gt;, GA &lt;dbl&gt;,
+## #   HI &lt;dbl&gt;, ID &lt;dbl&gt;, IL &lt;dbl&gt;, IN &lt;dbl&gt;, IA &lt;dbl&gt;, KS &lt;dbl&gt;, KY &lt;dbl&gt;,
+## #   LA &lt;dbl&gt;, ME &lt;dbl&gt;, MD &lt;dbl&gt;, MA &lt;dbl&gt;, MI &lt;dbl&gt;, MN &lt;dbl&gt;, MS &lt;dbl&gt;,
+## #   MO &lt;dbl&gt;, MT &lt;dbl&gt;, NE &lt;dbl&gt;, NV &lt;dbl&gt;, NH &lt;dbl&gt;, NJ &lt;dbl&gt;, NM &lt;dbl&gt;,
+## #   NY &lt;dbl&gt;, NC &lt;dbl&gt;, ND &lt;dbl&gt;, OH &lt;dbl&gt;, OK &lt;dbl&gt;, OR &lt;dbl&gt;, PA &lt;dbl&gt;,
+## #   RI &lt;dbl&gt;, SC &lt;dbl&gt;, SD &lt;dbl&gt;, TN &lt;dbl&gt;, TX &lt;dbl&gt;, UT &lt;dbl&gt;, VT &lt;dbl&gt;,
+## #   VA &lt;dbl&gt;, WA &lt;dbl&gt;, WV &lt;dbl&gt;, WI &lt;dbl&gt;, WY &lt;dbl&gt;</code></pre>
+<p>My data sets were already tidy, so I used the pivot_wider function, which widens the data by increasing columns and decreasing rows as seen in “College_wider” and “Education_wider”. Both of these data sets expanded columns by separating out individual states per column to widen the dataset.</p>
+</div>
+<div id="joiningmerging" class="section level2">
+<h2>Joining/Merging</h2>
+<pre class="r"><code>joindata &lt;- left_join(Education, College, by = &quot;States&quot;) %&gt;% 
+    glimpse()</code></pre>
+<pre><code>## Rows: 51
+## Columns: 15
+## $ States                           &lt;chr&gt; &quot;AL&quot;, &quot;AK&quot;, &quot;AZ&quot;, &quot;AR&quot;, &quot;CA&quot;, &quot;CO&quot;, …
+## $ region                           &lt;chr&gt; &quot;ESC&quot;, &quot;PAC&quot;, &quot;MTN&quot;, &quot;WSC&quot;, &quot;PAC&quot;, &quot;…
+## $ pop                              &lt;dbl&gt; 4041, 550, 3665, 2351, 29760, 3294, …
+## $ SATV                             &lt;dbl&gt; 470, 438, 445, 470, 419, 456, 430, 4…
+## $ SATM                             &lt;dbl&gt; 514, 476, 497, 511, 484, 513, 471, 4…
+## $ percent                          &lt;dbl&gt; 8, 42, 25, 6, 45, 28, 74, 58, 68, 44…
+## $ dollars                          &lt;dbl&gt; 3.648, 7.887, 4.231, 3.334, 4.826, 4…
+## $ pay                              &lt;dbl&gt; 27, 43, 30, 23, 39, 31, 43, 35, 39, …
+## $ Total                            &lt;dbl&gt; 310941, 30717, 704245, 158374, 26522…
+## $ White                            &lt;dbl&gt; 199837, 21392, 429869, 114839, 10663…
+## $ Black                            &lt;dbl&gt; 90446, 1041, 101276, 29981, 216554, …
+## $ Hispanic                         &lt;dbl&gt; 7066, 1276, 106780, 5277, 764410, 38…
+## $ `Asian/Pacific Islander`         &lt;dbl&gt; 5198, 1837, 25489, 2795, 491873, 129…
+## $ `American Indian/ Alaska Native` &lt;dbl&gt; 2536, 4329, 20032, 1805, 24635, 4776…
+## $ `Non-resident Alien`             &lt;dbl&gt; 5858, 842, 20799, 3677, 88384, 7018,…</code></pre>
+<p>I joined the dataset “Education” and “College” together by using a left join with their common variable “States”.</p>
+</div>
+<div id="wrangling" class="section level2">
+<h2>Wrangling</h2>
+<pre class="r"><code>joindata %&gt;% filter(region == &quot;SA&quot;) %&gt;% group_by(region) %&gt;% 
+    summarize_if(is.numeric, mean, na.rm = T)</code></pre>
+<pre><code>## # A tibble: 1 x 14
+##   region   pop  SATV  SATM percent dollars   pay  Total  White  Black Hispanic
+##   &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+## 1 SA     4841.  417.  459.      52    5.55  31.8 372577 2.24e5 88060.   31753.
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% arrange(Total)</code></pre>
+<pre><code>## # A tibble: 51 x 15
+##    States region   pop  SATV  SATM percent dollars   pay Total White Black
+##    &lt;chr&gt;  &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1 AK     PAC      550   438   476      42    7.89    43 30717 21392  1041
+##  2 WY     MTN      454   458   519      13    5.26    29 35936 31778   398
+##  3 VT     NE       563   431   466      62    5.74    31 42946 38802   926
+##  4 MT     MTN      799   464   523      20    5.18    26 47840 40324   338
+##  5 SD     WNC      696   506   555       5    3.73    22 50444 43666   851
+##  6 ND     WNC      639   505   564       6    3.68    23 51327 43435   963
+##  7 DE     SA       666   433   470      58    6.02    35 53088 36057 10726
+##  8 ME     NE      1228   423   463      60    5.89    28 67796 61778  1451
+##  9 HI     PAC     1108   404   481      52    5.01    32 70104 17204  1577
+## 10 NH     NE      1109   442   486      67    5.50    31 71739 63703  1557
+## # … with 41 more rows, and 4 more variables: Hispanic &lt;dbl&gt;, `Asian/Pacific
+## #   Islander` &lt;dbl&gt;, `American Indian/ Alaska Native` &lt;dbl&gt;, `Non-resident
+## #   Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% select_if(is.numeric) %&gt;% na.omit %&gt;% cor</code></pre>
+<pre><code>##                                       pop       SATV       SATM    percent
+## pop                             1.0000000 -0.3381028 -0.2300418  0.2100687
+## SATV                           -0.3381028  1.0000000  0.9620359 -0.8627954
+## SATM                           -0.2300418  0.9620359  1.0000000 -0.8581495
+## percent                         0.2100687 -0.8627954 -0.8581495  1.0000000
+## dollars                         0.1436745 -0.5268313 -0.4844477  0.7111474
+## pay                             0.3677244 -0.5559238 -0.4853306  0.6630098
+## Total                           0.9746094 -0.3084975 -0.1963478  0.1705355
+##                                      dollars          pay       Total
+## pop                             1.436745e-01  0.367724370  0.97460940
+## SATV                           -5.268313e-01 -0.555923834 -0.30849749
+## SATM                           -4.844477e-01 -0.485330585 -0.19634782
+## percent                         7.111474e-01  0.663009762  0.17053552
+## dollars                         1.000000e+00  0.847673739  0.07147804
+## pay                             8.476737e-01  1.000000000  0.33558205
+## Total                           7.147804e-02  0.335582052  1.00000000
+##                                      White       Black      Hispanic
+## pop                             0.95850818  0.85647177  8.453655e-01
+## SATV                           -0.27821510 -0.41775072 -2.541552e-01
+## SATM                           -0.16614041 -0.35500479 -1.576153e-01
+## percent                         0.14609346  0.22446473  1.326910e-01
+## dollars                         0.09642177  0.06516872  8.665389e-05
+## pay                             0.35192359  0.26277546  2.322220e-01
+## Total                           0.95348347  0.84484103  9.111250e-01
+##                                Asian/Pacific Islander
+## pop                                        0.80356269
+## SATV                                      -0.23774348
+## SATM                                      -0.12293742
+## percent                                    0.16215895
+## dollars                                    0.06034176
+## pay                                        0.32253097
+## Total                                      0.86805207
+##                                American Indian/ Alaska Native
+## pop                                               0.463451224
+## SATV                                              0.032924599
+## SATM                                              0.087169903
+## percent                                          -0.139570478
+## dollars                                          -0.179155909
+## pay                                               0.007913314
+## Total                                             0.576885700
+##                                Non-resident Alien
+## pop                                     0.9449667
+## SATV                                   -0.3468626
+## SATM                                   -0.2288498
+## percent                                 0.2734735
+## dollars                                 0.2249685
+## pay                                     0.4281251
+## Total                                   0.9413443
+##  [ reached getOption(&quot;max.print&quot;) -- omitted 6 rows ]</code></pre>
+<pre class="r"><code>joindata %&gt;% mutate(dollars = ntile(pop, 1000)) %&gt;% arrange(desc(dollars)) %&gt;% 
+    select(States, dollars)</code></pre>
+<pre><code>## # A tibble: 51 x 2
+##    States dollars
+##    &lt;chr&gt;    &lt;int&gt;
+##  1 CA          51
+##  2 NY          50
+##  3 TX          49
+##  4 FL          48
+##  5 PA          47
+##  6 IL          46
+##  7 OH          45
+##  8 MI          44
+##  9 NJ          43
+## 10 NC          42
+## # … with 41 more rows</code></pre>
+<pre class="r"><code>joindata %&gt;% summarize_all(n_distinct)</code></pre>
+<pre><code>## # A tibble: 1 x 15
+##   States region   pop  SATV  SATM percent dollars   pay Total White Black
+##    &lt;int&gt;  &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;   &lt;int&gt;   &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;
+## 1     51      9    51    42    40      37      51    20    51    51    50
+## # … with 4 more variables: Hispanic &lt;int&gt;, `Asian/Pacific Islander` &lt;int&gt;,
+## #   `American Indian/ Alaska Native` &lt;int&gt;, `Non-resident Alien` &lt;int&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% group_by(region) %&gt;% summarize_if(is.numeric, mean, 
+    na.rm = T)</code></pre>
+<pre><code>## # A tibble: 9 x 14
+##   region    pop  SATV  SATM percent dollars   pay  Total  White  Black Hispanic
+##   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+## 1 ENC     8402.  451.  509.   23       5.39  33.8 5.84e5 4.35e5 7.25e4   33025 
+## 2 ESC     3794   476.  520.    8.5     3.77  27   2.59e5 1.85e5 5.98e4    4758.
+## 3 MA     12534   417.  469.   67.7     8.06  38.7 7.95e5 5.11e5 1.04e5   79231 
+## 4 MTN     1707.  462.  513.   18       4.34  28   2.09e5 1.41e5 1.80e4   30560.
+## 5 NE      2201   429.  470    66.2     6.40  34.3 1.55e5 1.15e5 1.16e4   10431.
+## 6 PAC     7825.  427.  482.   46.4     5.61  35.8 6.67e5 3.09e5 4.84e4  161774.
+## 7 SA      4841.  417.  459.   52       5.55  31.8 3.73e5 2.24e5 8.81e4   31753.
+## 8 WNC     2523.  493.  551.    8.86    4.47  27   2.18e5 1.72e5 1.89e4    7201.
+## 9 WSC     6676   459.  503    16.5     3.83  25.2 4.82e5 2.62e5 7.27e4   99386 
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% group_by(region) %&gt;% summarize_if(is.numeric, sd, 
+    na.rm = T)</code></pre>
+<pre><code>## # A tibble: 9 x 14
+##   region    pop  SATV  SATM percent dollars   pay  Total  White  Black Hispanic
+##   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+## 1 ENC     3018. 26.0  32.2    17.9    0.391  2.49 2.07e5 1.16e5 43120.   40549.
+## 2 ESC      955.  5.62  4.57    3.42   0.449  2.16 7.02e4 6.32e4 27084.    2548.
+## 3 MA      5161.  4.16  5.13    3.21   1.37   3.06 4.15e5 2.50e5 60574.   62326.
+## 4 MTN     1167. 18.4  17.2     7.75   0.841  2.83 2.22e5 1.38e5 34481.   36755.
+## 5 NE      2097.  7.25  9.08    5.81   0.910  5.43 1.65e5 1.12e5 15780.   13234.
+## 6 PAC    12377. 15.5   3.90    4.04   1.28   4.97 1.12e6 4.36e5 94234.  337040.
+## 7 SA      3869. 16.4  19.5    15.2    1.16   4.58 2.87e5 1.60e5 59935.   62505.
+## 8 WNC     1732. 15.1  17.4     3.58   0.609  3.74 1.52e5 1.16e5 19940.    4954.
+## 9 WSC     6917. 31.0  28.4    17.1    0.389  2.22 5.64e5 2.57e5 68713.  185199.
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% summarize_if(is.numeric, mean, na.rm = T)</code></pre>
+<pre><code>## # A tibble: 1 x 13
+##     pop  SATV  SATM percent dollars   pay  Total  White  Black Hispanic
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+## 1 4877.  448.  497.    33.7    5.18  30.9 3.74e5 2.37e5 50662.   44540.
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% summarize_if(is.numeric, sd, na.rm = T)</code></pre>
+<pre><code>## # A tibble: 1 x 13
+##     pop  SATV  SATM percent dollars   pay  Total  White  Black Hispanic
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+## 1 5439.  30.8  34.6    24.1    1.38  5.31 4.41e5 2.14e5 56184.  120375.
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% summarize_if(is.numeric, min, na.rm = T)</code></pre>
+<pre><code>## # A tibble: 1 x 13
+##     pop  SATV  SATM percent dollars   pay Total White Black Hispanic
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1   454   397   437       4    2.99    22 30717 17204   338      595
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% summarize_if(is.numeric, max, na.rm = T)</code></pre>
+<pre><code>## # A tibble: 1 x 13
+##     pop  SATV  SATM percent dollars   pay  Total  White  Black Hispanic
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+## 1 29760   511   577      74    9.16    43 2.65e6 1.07e6 216554   764410
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>joindata %&gt;% summarize_if(is.numeric, var, na.rm = T)</code></pre>
+<pre><code>## # A tibble: 1 x 13
+##      pop  SATV  SATM percent dollars   pay   Total   White  Black Hispanic
+##    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+## 1 2.96e7  950. 1195.    580.    1.89  28.2 1.94e11 4.57e10 3.16e9  1.45e10
+## # … with 3 more variables: `Asian/Pacific Islander` &lt;dbl&gt;, `American Indian/
+## #   Alaska Native` &lt;dbl&gt;, `Non-resident Alien` &lt;dbl&gt;</code></pre>
+<p>The filter function is sorted by the region ‘SA’. The arrange function is sorted from least to greatest organized by ‘Total’. The select function sorted by numerical values. The summarize function identifies distinct values for each column. The group by function sorted by a categorical ‘Region’ to list the mean and standard deviations of each column.</p>
+<p>The mean values for all numeric values are: 4876.467 people for ‘pop’, 448.1569 for ‘SATV’, 497.3922 for ‘SATM’, 33.7451% for ‘percent’, $5,175.49 per student for ‘dollars’, $30,941.18 for ‘pay’, and 374260.3 people for ‘Total’.
+The standard deviations for all numeric values are: 5439.203 people for ‘pop’, 30.82101 for ‘SATV’, 34.56882 for ‘SATM’, 24.07392% for ‘percent’, $1,376.166 per student for ‘dollars’, and $5,308.151 for ‘pay’, and 440782.2 people for ‘Total’.
+The minimum for all numeric values are: 454 people for ‘pop’, 397 for ‘SATV’, 437 for ‘SATM’, 4% for ‘percent’, $2,993 per student for ‘dollars’, $22,000 for ‘pay’, and 30717 people for ‘Total’.
+The maximum for all numeric values are: 29760 people for ‘pop’, 511 for ‘SATV’, 577 for ‘SATM’, 97% for ‘percent’, $9,159 per student for ‘dollars’, $43,000 for ‘pay’, and 2652241 people for ‘Total’.
+The variance for all numeric values are: 29584926 people for ‘pop’, 949.9349 for ‘SATV’, 1195.003 for ‘SATM’, 579.5537% for ‘percent’, $1,893.833 per student for ‘dollars’, $28,176.47 for ‘pay’, and 194288932203 people for ‘Total’.
+The number of distinct values for all numeric values are: 51 for ‘pop’, 42 for ‘SATV’, 40 for ‘SATM’, 37 for ‘percent’, 51 for ‘dollars’, 20 for ‘pay’, and 51 for ‘Total’.</p>
+</div>
+<div id="visualizing" class="section level2">
+<h2>Visualizing</h2>
+<pre class="r"><code>joindata %&gt;% ggplot(aes(x = SATV, y = SATM, color = region)) + 
+    geom_point(size = 2) + ggtitle(&quot;Average SAT Verbal and SAT Math Scores by Region&quot;) + 
+    xlab(&quot;Average Scores on the Verbal SAT&quot;) + ylab(&quot;Average Scores on the Math SAT&quot;)</code></pre>
+<p><img src="/project/Project1_files/figure-html/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>joindata %&gt;% ggplot(aes(x = region, fill = pop)) + geom_bar(aes(y = dollars), 
+    stat = &quot;summary&quot;, fun.y = &quot;mean&quot;) + ggtitle(&quot;State Spending on Public Education per Student by Region&quot;) + 
+    ylab(&quot;Average Cost of Spending ($1000&#39;s)&quot;) + xlab(&quot;Region&quot;)</code></pre>
+<p><img src="/project/Project1_files/figure-html/unnamed-chunk-5-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>joindata %&gt;% ggplot(aes(x = region, fill = pop)) + geom_bar(aes(y = Total), 
+    stat = &quot;summary&quot;, fun.y = &quot;mean&quot;) + ggtitle(&quot;Fall Enrollment in Degree-Granting Institutions by Region&quot;) + 
+    ylab(&quot;Fall Enrollment in Degree-Granting Institutions&quot;) + 
+    xlab(&quot;Region&quot;)</code></pre>
+<p><img src="/project/Project1_files/figure-html/unnamed-chunk-5-3.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>joindata %&gt;% ggplot(aes(x = dollars, y = Total, color = region)) + 
+    geom_point(size = 2) + ggtitle(&quot;State Spending on Public Education and Fall Enrollment in Degree-Granting Institutions by Region&quot;) + 
+    xlab(&quot;Average Cost of Spending ($1000&#39;s)&quot;) + ylab(&quot;Fall Enrollment in Degree-Granting Institutions&quot;)</code></pre>
+<p><img src="/project/Project1_files/figure-html/unnamed-chunk-5-4.png" width="672" style="display: block; margin: auto;" /></p>
+<p>The first plot compares the variables ‘SATV’ and ‘SATM’ by ‘Region’. The graph shows the highest average scores on the Math and Verbal SAT was from the WNC region, while the lowest average scores on the Math and Verbal SAT was from the SA region. There is a positive correlation, which means students that had higher average scores on the Verbal SAT would have higher average scores on the Math SAT and students that had lower average scores on the Verbal SAT would have lower average scores on the Math SAT.</p>
+<p>The second plot shows the average cost of state spending on public education per student by region. From the graph, it appears that the region MA has the greatest state spending on public education of about $8,000 per student, while the region ESC has the lowest state spending of about $3,700 per student.</p>
+<p>The third plot shows the fall enrollment of students in degree-granting institutions by region. From the graph, it appears that the region MA has the highest fall enrollment of students, while the region NE has the lowest fall enrollment of 4x less than the region MA.</p>
+<p>The fourth plot shows state spending on public education per student by fall enrollment of students in degree-granting institutions to determine whether there is a correlation between enrollment on state spending on public education during K-12. The graph shows there is a slight positive correlation. The region MA had the greatest state spending and the highest fall enrollment.</p>
+</div>
+<div id="dimensionality-reduction" class="section level2">
+<h2>Dimensionality Reduction</h2>
+<pre class="r"><code>joindata %&gt;% select_if(is.numeric) %&gt;% scale %&gt;% cov %&gt;% round(2)</code></pre>
+<pre><code>##                                  pop  SATV  SATM percent dollars   pay Total
+## pop                             1.00 -0.34 -0.23    0.21    0.14  0.37  0.97
+## SATV                           -0.34  1.00  0.96   -0.86   -0.53 -0.56 -0.31
+## SATM                           -0.23  0.96  1.00   -0.86   -0.48 -0.49 -0.20
+## percent                         0.21 -0.86 -0.86    1.00    0.71  0.66  0.17
+## dollars                         0.14 -0.53 -0.48    0.71    1.00  0.85  0.07
+## pay                             0.37 -0.56 -0.49    0.66    0.85  1.00  0.34
+## Total                           0.97 -0.31 -0.20    0.17    0.07  0.34  1.00
+##                                White Black Hispanic Asian/Pacific Islander
+## pop                             0.96  0.86     0.85                   0.80
+## SATV                           -0.28 -0.42    -0.25                  -0.24
+## SATM                           -0.17 -0.36    -0.16                  -0.12
+## percent                         0.15  0.22     0.13                   0.16
+## dollars                         0.10  0.07     0.00                   0.06
+## pay                             0.35  0.26     0.23                   0.32
+## Total                           0.95  0.84     0.91                   0.87
+##                                American Indian/ Alaska Native
+## pop                                                      0.46
+## SATV                                                     0.03
+## SATM                                                     0.09
+## percent                                                 -0.14
+## dollars                                                 -0.18
+## pay                                                      0.01
+## Total                                                    0.58
+##                                Non-resident Alien
+## pop                                          0.94
+## SATV                                        -0.35
+## SATM                                        -0.23
+## percent                                      0.27
+## dollars                                      0.22
+## pay                                          0.43
+## Total                                        0.94
+##  [ reached getOption(&quot;max.print&quot;) -- omitted 6 rows ]</code></pre>
+<pre class="r"><code>education_nums &lt;- joindata %&gt;% select_if(is.numeric) %&gt;% scale()
+education_pca &lt;- princomp(education_nums)
+names(education_pca)</code></pre>
+<pre><code>## [1] &quot;sdev&quot;     &quot;loadings&quot; &quot;center&quot;   &quot;scale&quot;    &quot;n.obs&quot;    &quot;scores&quot;   &quot;call&quot;</code></pre>
+<pre class="r"><code>summary(education_pca, loadings = T)</code></pre>
+<pre><code>## Importance of components:
+##                          Comp.1    Comp.2     Comp.3     Comp.4    Comp.5
+## Standard deviation     2.612817 1.8308997 0.97034720 0.83891132 0.6268343
+## Proportion of Variance 0.535642 0.2630183 0.07387732 0.05521905 0.0308292
+## Cumulative Proportion  0.535642 0.7986603 0.87253762 0.92775667 0.9585859
+##                            Comp.6     Comp.7      Comp.8      Comp.9
+## Standard deviation     0.39453790 0.36005172 0.297150468 0.239377442
+## Proportion of Variance 0.01221334 0.01017154 0.006928028 0.004495969
+## Cumulative Proportion  0.97079920 0.98097074 0.987898771 0.992394739
+##                            Comp.10     Comp.11    Comp.12 Comp.13
+## Standard deviation     0.233289391 0.164304861 0.12453821       0
+## Proportion of Variance 0.004270186 0.002118155 0.00121692       0
+## Cumulative Proportion  0.996664925 0.998783080 1.00000000       1
+## 
+## Loadings:
+##                                Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7
+## pop                             0.360  0.105         0.230         0.113       
+## SATV                           -0.201  0.399  0.373  0.115         0.130 -0.146
+## SATM                           -0.161  0.416  0.450  0.129         0.141       
+## percent                         0.159 -0.458        -0.149  0.104  0.481       
+## dollars                         0.111 -0.414  0.527        -0.126  0.236 -0.479
+## pay                             0.198 -0.335  0.527        -0.101 -0.570  0.282
+## Total                           0.364  0.144                                   
+##                                Comp.8 Comp.9 Comp.10 Comp.11 Comp.12 Comp.13
+## pop                             0.184  0.231          0.363   0.753         
+## SATV                           -0.338        -0.274   0.605  -0.228         
+## SATM                           -0.209                -0.646   0.302         
+## percent                        -0.632  0.141 -0.228           0.103         
+## dollars                         0.351  0.272  0.126          -0.154         
+## pay                            -0.191 -0.270 -0.174           0.119         
+## Total                                  0.133 -0.133  -0.105  -0.219  -0.860 
+##  [ reached getOption(&quot;max.print&quot;) -- omitted 6 rows ]</code></pre>
+<pre class="r"><code>eig &lt;- education_pca$sdev^2
+varprop = round(eig/sum(eig), 2)
+
+ggplot() + geom_bar(aes(y = varprop, x = 1:13), stat = &quot;identity&quot;) + 
+    xlab(&quot;&quot;) + geom_path(aes(y = varprop, x = 1:13)) + geom_text(aes(x = 1:13, 
+    y = varprop, label = round(varprop, 2)), vjust = 1, col = &quot;white&quot;, 
+    size = 4) + scale_y_continuous(labels = scales::percent) + 
+    scale_x_continuous(breaks = 1:13)</code></pre>
+<p><img src="/project/Project1_files/figure-html/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>eig[1:13]</code></pre>
+<pre><code>##     Comp.1     Comp.2     Comp.3     Comp.4     Comp.5     Comp.6     Comp.7 
+## 6.82681026 3.35219354 0.94157369 0.70377221 0.39292120 0.15566015 0.12963724 
+##     Comp.8     Comp.9    Comp.10    Comp.11    Comp.12    Comp.13 
+## 0.08829840 0.05730156 0.05442394 0.02699609 0.01550977 0.00000000</code></pre>
+<pre class="r"><code>round(cumsum(eig)/sum(eig), 2)</code></pre>
+<pre><code>##  Comp.1  Comp.2  Comp.3  Comp.4  Comp.5  Comp.6  Comp.7  Comp.8  Comp.9 Comp.10 
+##    0.54    0.80    0.87    0.93    0.96    0.97    0.98    0.99    0.99    1.00 
+## Comp.11 Comp.12 Comp.13 
+##    1.00    1.00    1.00</code></pre>
+<pre class="r"><code>eig</code></pre>
+<pre><code>##     Comp.1     Comp.2     Comp.3     Comp.4     Comp.5     Comp.6     Comp.7 
+## 6.82681026 3.35219354 0.94157369 0.70377221 0.39292120 0.15566015 0.12963724 
+##     Comp.8     Comp.9    Comp.10    Comp.11    Comp.12    Comp.13 
+## 0.08829840 0.05730156 0.05442394 0.02699609 0.01550977 0.00000000</code></pre>
+<pre class="r"><code>eigen(cor(education_nums))</code></pre>
+<pre><code>## eigen() decomposition
+## $values
+##  [1]  6.963346e+00  3.419237e+00  9.604052e-01  7.178477e-01  4.007796e-01
+##  [6]  1.587734e-01  1.322300e-01  9.006437e-02  5.844759e-02  5.551242e-02
+## [11]  2.753601e-02  1.581996e-02 -9.714466e-17
+## 
+## $vectors
+##             [,1]        [,2]         [,3]         [,4]         [,5]        [,6]
+##  [1,]  0.3598694 -0.10508467 -0.012131481 -0.230403831  0.038790056 -0.11290154
+##  [2,] -0.2011701 -0.39897314 -0.372584625 -0.115342847  0.004628151 -0.13041962
+##  [3,] -0.1609283 -0.41617295 -0.449531582 -0.128729697  0.048303339 -0.14124663
+##  [4,]  0.1587762  0.45837471  0.092847823  0.148941414  0.103617566 -0.48080208
+##  [5,]  0.1108301  0.41370004 -0.526980856 -0.021301108 -0.125784766 -0.23558338
+##  [6,]  0.1981618  0.33505252 -0.527247199  0.003846314 -0.100684443  0.57032657
+##  [7,]  0.3635712 -0.14423521  0.002829735 -0.073258497  0.040913107  0.01605966
+##               [,7]        [,8]        [,9]        [,10]       [,11]
+##  [1,] -0.077673578  0.18402952 -0.23114479  0.006014837 -0.36330236
+##  [2,]  0.146045141 -0.33835010 -0.05140643 -0.273940331 -0.60464538
+##  [3,]  0.034104643 -0.20938792 -0.04058572  0.063667745  0.64645225
+##  [4,] -0.058145648 -0.63222546 -0.14068763 -0.228173536  0.07965285
+##  [5,]  0.479246661  0.35122959 -0.27236409  0.126171720  0.01223081
+##  [6,] -0.282080313 -0.19056316  0.27044418 -0.174331532 -0.03722679
+##  [7,] -0.073909507  0.02597264 -0.13282308 -0.132517336  0.10494365
+##              [,12]         [,13]
+##  [1,]  0.752737616  4.207784e-15
+##  [2,] -0.228265465 -2.992267e-15
+##  [3,]  0.302259251  3.561052e-15
+##  [4,]  0.103346671  9.655528e-16
+##  [5,] -0.154254327 -7.643827e-16
+##  [6,]  0.119400899  4.745063e-16
+##  [7,] -0.219083270  8.598575e-01
+##  [ reached getOption(&quot;max.print&quot;) -- omitted 6 rows ]</code></pre>
+<pre class="r"><code>pca_1 &lt;- princomp(education_nums)
+summary(pca_1, loadings = T)</code></pre>
+<pre><code>## Importance of components:
+##                          Comp.1    Comp.2     Comp.3     Comp.4    Comp.5
+## Standard deviation     2.612817 1.8308997 0.97034720 0.83891132 0.6268343
+## Proportion of Variance 0.535642 0.2630183 0.07387732 0.05521905 0.0308292
+## Cumulative Proportion  0.535642 0.7986603 0.87253762 0.92775667 0.9585859
+##                            Comp.6     Comp.7      Comp.8      Comp.9
+## Standard deviation     0.39453790 0.36005172 0.297150468 0.239377442
+## Proportion of Variance 0.01221334 0.01017154 0.006928028 0.004495969
+## Cumulative Proportion  0.97079920 0.98097074 0.987898771 0.992394739
+##                            Comp.10     Comp.11    Comp.12 Comp.13
+## Standard deviation     0.233289391 0.164304861 0.12453821       0
+## Proportion of Variance 0.004270186 0.002118155 0.00121692       0
+## Cumulative Proportion  0.996664925 0.998783080 1.00000000       1
+## 
+## Loadings:
+##                                Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7
+## pop                             0.360  0.105         0.230         0.113       
+## SATV                           -0.201  0.399  0.373  0.115         0.130 -0.146
+## SATM                           -0.161  0.416  0.450  0.129         0.141       
+## percent                         0.159 -0.458        -0.149  0.104  0.481       
+## dollars                         0.111 -0.414  0.527        -0.126  0.236 -0.479
+## pay                             0.198 -0.335  0.527        -0.101 -0.570  0.282
+## Total                           0.364  0.144                                   
+##                                Comp.8 Comp.9 Comp.10 Comp.11 Comp.12 Comp.13
+## pop                             0.184  0.231          0.363   0.753         
+## SATV                           -0.338        -0.274   0.605  -0.228         
+## SATM                           -0.209                -0.646   0.302         
+## percent                        -0.632  0.141 -0.228           0.103         
+## dollars                         0.351  0.272  0.126          -0.154         
+## pay                            -0.191 -0.270 -0.174           0.119         
+## Total                                  0.133 -0.133  -0.105  -0.219  -0.860 
+##  [ reached getOption(&quot;max.print&quot;) -- omitted 6 rows ]</code></pre>
+<pre class="r"><code>education_pca$loadings[1:7, 1:2] %&gt;% as.data.frame %&gt;% rownames_to_column %&gt;% 
+    ggplot() + geom_hline(aes(yintercept = 0), lty = 2) + geom_vline(aes(xintercept = 0), 
+    lty = 2) + ylab(&quot;PC2&quot;) + xlab(&quot;PC1&quot;) + geom_segment(aes(x = 0, 
+    y = 0, xend = Comp.1, yend = Comp.2), arrow = arrow(), col = &quot;blue&quot;) + 
+    geom_label(aes(x = Comp.1 * 1.1, y = Comp.2 * 1.1, label = rowname)) + 
+    ggtitle(&quot;PCA Loadings Plot&quot;)</code></pre>
+<p><img src="/project/Project1_files/figure-html/unnamed-chunk-6-2.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Three PCs can summarize 87% of the total variability. From the graph, PC1 and PC2 account for 80% of the total variance. PC1 explained 54% of the total variance. There are only two eigenvalues greater than 1. From the PCA loadings plot, ‘Total’ and ‘pop’ affects PC1 the most and ‘SATV’ and ‘SATM’ affects PC2 the most. There is a negative correlation of ‘dollars’, ‘percent’, and ‘pay’ with PC1.</p>
+</div>

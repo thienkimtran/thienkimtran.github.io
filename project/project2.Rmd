@@ -1,0 +1,308 @@
+---
+title: 'Project 2: Modeling, Testing, and Predicting'
+author: "Thien Kim Tran, ttt2249"
+date: '2021-05-07'
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE,fig.align="center",warning=FALSE,message=FALSE,fig.width=8, fig.height=5, linewidth=60)
+options(tibble.width = 100,width = 100)
+library(tidyverse)
+```
+
+## Introduction
+From this last year being very focused on health-care, with COVID-19 affecting the world, I thought I would do a project focusing more on health insurance as it is something very important to have. Health-care in America is very costly which is made more affordable with health insurance, so I was interested to see whether the costs of insurance would be affected by different factors. The dataset "Insurance" data set on Medical costs from Kaggle.com contains information about Insurance charges, BMI, smoker, region, number of children, age, and sex. I was interested in observing the relationship of charges of Insurance and whether they would increase or decrease in relation to the following attributes of the insured: BMI and smoker, specifically. 
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+library(lmtest)
+library(sandwich)
+
+Insurance <- read_csv("insurance (1).csv")
+Insurance <- Insurance%>% na.omit()
+```
+
+## MANOVA 
+```{r}
+man <- manova(cbind(bmi, charges)~smoker, data=Insurance)
+
+summary(man)
+summary.aov(man)
+
+Insurance%>%group_by(smoker)%>%summarize(mean(bmi),mean(charges))
+
+pairwise.t.test(Insurance$bmi, Insurance$smoker,p.adj="none")
+pairwise.t.test(Insurance$charges, Insurance$smoker,p.adj="none")
+1-0.95^9
+.05/9
+
+ggplot(Insurance, aes(x=age, y=bmi)) + geom_point(alpha = 0.5) + geom_density_2d(h=10) + coord_fixed() + facet_wrap(~smoker)
+```
+A total of 15 tests were performed: 1 MANOVA, 2 ANOVAs, and 6 t-tests. The probability of at least one type I error is 1-0.95^15=0.3697506 with the Bonferroni correction (adjusted significance level) is a=.05/15=0.0056 The MANOVA assumptions shows the response for bmi is not significant as (p>0.05), but the response charges for charges is significant (p<0.05) and the multivariate normality showed homogenity from the graph. 
+
+## Randomization Test
+```{r}
+data<-Insurance%>% dplyr::select(smoker, charges, bmi)
+data%>%group_by(smoker) %>% summarise(means= mean(charges)) %>% summarise(`mean_diff:`=diff(means)) %>% glimpse()
+	
+r_dist <- vector()
+
+for(i in 1:5000){
+  new<-data.frame(smoker=sample(data$smoker), charges=data$charges)
+  r_dist[i]<-mean(new[new$smoker=="yes",]$charges)-
+    mean(new[new$smoker=="no",]$charges)}
+
+mean(r_dist>23615.96)*2
+
+{hist(r_dist, main="Histogram of r_dist", ylab="Frequency", xlab="r_dist"); 
+  abline(v=23615.96, col="red")}
+```
+The null hypothesis is there is no significant difference in BMI and charges between Smoker vs. Non-smoker. The alternative hypothesis is there is a significant difference in BMI and charges between Smoker vs. Non-smoker. When conducting a t-test, the p-value calculated is less than 0.05 (p=0<0.05) suggesting that Smoker and Non-smoker accounting for the variables, BMI and charges, are significant. We reject the null hypothesis concluding that there is a significant difference in BMI and charges between Smoker vs. Non-smoker. From the randomized distribution of the differences in mean, the mean difference value (mean_diff) is 23615.96 between the groups Smoker vs. Non-smoker.
+
+## Linear Regression Model
+```{r}
+data$charges_c <- data$charges - mean(data$charges)
+data$bmi_c <- data$bmi - mean(data$bmi)
+
+fit <- lm(charges ~ bmi_c * smoker, data=data)
+summary(fit)
+
+ggplot(Insurance, aes(x=bmi, y=charges))+ geom_point(aes(color=smoker))+
+  geom_smooth(method="lm", se=F, fullrange=T, aes(color=smoker))+
+  ggtitle("")+ xlab("bmi")+ylab("charges")+theme_classic()
+
+resids<-fit$residuals
+fitvals<-fit$fitted.values
+shapiro.test(resids)
+bptest(fit)
+ggplot()+geom_point(aes(fitvals,resids))+geom_hline(yintercept=0, color='red')
+ggplot()+geom_qq(aes(sample=resids))+geom_qq_line(aes(sample=resids))
+
+summary(fit)
+coeftest(fit, vcov = vcovHC(fit))
+summary(fit)$r.sq
+
+fit2 <- lm(charges ~ bmi_c + smoker, data=data)
+summary(fit2)
+```
+The coefficient estimates for BMI with being a smoker and the interaction between the two variables are 388.02 and 23593.98. This means that for 1 unit increase in BMI, every smoker would have charges of $23,593.98, while for 1 unit increase in BMI in non-smokers, the charges are $388.02. All assumptions of linearity, homoskedstacity, and normality are met. The Shapiro-Wilkes test resulted in a p-value greater than 0.05 which means that normality was met. The standard values (28.610 to 31.79 for non-smokers and 453.102 to 480.18 for smokers) and t-values changed (2.9134 to 12.21 for non-smokers and 51.9721 to 49.14 for smokers). The proportion of variance is 0.741771.
+
+## Bootstrapping 
+```{r}
+fit3 <- data
+boot_fit1 <- sample_frac(fit3, replace = T)
+
+samp_distn <- replicate(5000, {
+    boot_fit1 <- sample_frac(fit3, replace = TRUE)
+    fitnew <- lm(charges ~ smoker, data = boot_fit1)
+    coef(fitnew)
+})
+
+samp_distn %>% t %>% as.data.frame %>% summarize_all(sd)
+
+fit4 <- lm(charges ~ smoker, data = fit3)
+resids <- fit4$residuals
+fitted <- fit4$fitted.values
+
+resid_resamp <- replicate(5000, {
+    new_resids <- sample(resids, replace = TRUE)
+    fit3$new_charges <- fitted + new_resids
+    fit4 <- lm(new_charges ~ smoker, data = fit3)
+    coef(fit4)
+})
+
+resid_resamp %>% t %>% as.data.frame %>% summarize_all(sd)
+```
+The standard error (504.6131) from the bootstrapped sample is lower than the original standard error and the robust standard errors (719.0902).
+
+## Logistic Regression Model (with binary variable)
+```{r}
+data2<-data%>%mutate(smoker=ifelse(data$smoker=="yes",1,0))
+fit5<-glm(smoker~charges+bmi,data=data2,family=binomial(link="logit"))
+coeftest(fit5)
+exp(coeftest(fit5))
+
+data$predict<-predict(fit5, data=data, type = "response")
+
+table(predict=as.numeric(data$predict>.5),truth=data$smoker)%>%addmargins
+(1029+220)/1338
+1029/1064
+220/255
+220/274
+
+odds<-function(p)p/(1-p)
+logit<-function(p)log(odds(p))
+
+data$logit<-predict(fit5, type="link")
+data%>%ggplot()+geom_density(aes(logit,color=smoker,fill=smoker), alpha=.4)+
+  theme(legend.position=c(.85,.85))+ggtitle("Density Plot of Smoker vs. Non-smoker") + geom_vline(xintercept=0)+xlab("logit")
+
+library(plotROC) 
+prob1 <- predict(fit5, type = "response")
+ggplot(data,aes(charges, prob1,color=smoker))+geom_line()
+ROCplot <- ggplot(data) + geom_roc(aes(d = smoker, m = prob1), 
+    n.cuts = 0) + geom_segment(aes(x=0,y=0,xend=1,yend=1))
+ROCplot
+calc_auc(ROCplot)
+```
+For every increase in charges, the odds of being a smoker increase by 1.00032 and for every increase in BMI, the odds of being a smoker increase by 0.75343. From the confusion matrix, the ACC/accuracy is (1029+220)/1338=0.9334828, the TNR/specificity is 1029/1064=0.9671053, the TPR/sensitivity is 220/274=0.8029197, and PPV/precision is 220/255=0.8627451. The AUC is 0.9823229 which means that the model is accurate. 
+
+```{r} 
+class_diag<-function(probs,truth){
+ tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+ acc=sum(diag(tab))/sum(tab)
+ sens=tab[2,2]/colSums(tab)[2]
+ spec=tab[1,1]/colSums(tab)[1]
+ ppv=tab[2,2]/rowSums(tab)[2]
+ if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+
+ ord<-order(probs, decreasing=TRUE)
+ probs <- probs[ord]; truth <- truth[ord]
+ TPR=cumsum(truth)/max(1,sum(truth))
+ FPR=cumsum(!truth)/max(1,sum(!truth))
+ dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+ TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+ n <- length(TPR)
+ auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+ data.frame(acc,sens,spec,ppv,auc)
+} 
+
+set.seed(1234)
+k=10 
+
+data3<-data2[sample(nrow(data2)),]
+folds<-cut(seq(1:nrow(data2)),breaks=k,labels=F)
+diags<-NULL
+for(i in 1:k){
+ train<-data3[folds!=i,]
+ test<-data3[folds==i,]
+ truth<-test$smoker
+ fit<-glm(smoker~charges+bmi, data=train, family=binomial(link="logit"))
+ probs<-predict(fit,newdata = test,type="response")
+ diags<-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags,2,mean)
+```
+The ACC/accuracy is 0.9319661, the TNR/specificity is 0.9643649, the TPR/sensitivity is 0.8097611, and PPV/precision is 0.8593115. The AUC is 0.9820508 which is lower than the AUC from above (0.9823229). The model is a good indicator in classifying charges and BMI associated with smoking. 
+
+## Logistic Regression Model (with more variables)
+
+```{r}
+data3<-Insurance%>% dplyr::select(smoker, children, charges, region, age)
+data4<-data3%>%mutate(smoker=ifelse(data$smoker=="yes",1,0)) 
+log_reg <-glm(smoker~age+region+charges+children, data=data4, family = "binomial")
+prob2 <- predict(log_reg)
+coef(log_reg)
+exp(coef(log_reg))
+
+data2$predict<- predict(log_reg, data=data3, type="response")
+table(predict=as.numeric(data2$predict>0.5), truth=data2$smoker)%>% addmargins()
+(1009+199)/1338
+1009/1064
+199/274
+199/254
+
+odds2<-function(p)p/(1-p)
+logit2<-function(p)log(odds2(p))
+
+data$logit2<-predict(log_reg, type="link")
+data%>%ggplot()+geom_density(aes(logit2,color=smoker,fill=smoker), alpha=.4)+
+  theme(legend.position=c(.85,.85))+ggtitle("Density Plot of Smoker vs. Non-smoker") + geom_vline(xintercept=0)+xlab("logit")
+
+library(plotROC) 
+ggplot(data4,aes(region, prob2,color=smoker))+geom_line()
+ROCplot1 <- ggplot(data4) + geom_roc(aes(d = smoker, m = prob2), 
+    n.cuts = 0) + geom_segment(aes(x=0,y=0,xend=1,yend=1))
+ROCplot1
+calc_auc(ROCplot1)
+
+class_diag<-function(probs,truth){
+ tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+ acc=sum(diag(tab))/sum(tab)
+ sens=tab[2,2]/colSums(tab)[2]
+ spec=tab[1,1]/colSums(tab)[1]
+ ppv=tab[2,2]/rowSums(tab)[2]
+ if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+
+ ord<-order(probs, decreasing=TRUE)
+ probs <- probs[ord]; truth <- truth[ord]
+ TPR=cumsum(truth)/max(1,sum(truth))
+ FPR=cumsum(!truth)/max(1,sum(!truth))
+ dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+ TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+ n <- length(TPR)
+ auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+ data.frame(acc,sens,spec,ppv,auc)
+} 
+
+truth = data3$smoker
+class_diag(prob2, truth)
+table(prediction=as.numeric(prob2>.5), truth)%>% addmargins()
+```
+The in-sample classification diagnostics is Accuracy=(1009+199)/1338=0.9028401, Sensitivity=199/274=0.7262774, Specificity=1009/1064=0.9483083, Precision=199/254=0.7834646, and AUC=0.9759155. From the 10-fold CV with the same model, the out-of-sample classification diagnostics is Accuracy=0.8908819, Sensitivity=0.6094891, Specificity=0.9633459, Precision=0.8106796, and AUC=NA. 
+
+```{r} 
+set.seed(1234)
+k=10 
+
+data_cv<-data4[sample(nrow(data4)),]
+folds<-cut(seq(1:nrow(data4)),breaks=k,labels=F)
+diags<-NULL
+for(i in 1:k){
+ train<-data_cv[folds!=i,]
+ test<-data_cv[folds==i,]
+ truth1<-test$smoker
+ fitcv1<-glm(smoker~age+region+charges+children, data=train, family=binomial(link="logit"))
+ probs_cv<-predict(fitcv1,newdata = test,type="response")
+ diags<-rbind(diags,class_diag(probs_cv,truth1))
+}
+summarize_all(diags,mean)
+
+library(glmnet)
+set.seed(1234)
+
+y2<-as.matrix(data4$smoker) 
+x2<-model.matrix(smoker~age+region+charges+children,data=data4)[,-1] 
+head(x2)
+
+x3<- scale(x2)
+
+cv <- cv.glmnet(x3,y2, family="binomial")
+lasso<-glmnet(x3,y2,family="binomial",lambda=cv$lambda.1se)
+coef(lasso)
+
+set.seed(1234)
+k=10 
+data5<- data4%>% sample_frac
+folds <- ntile(1:nrow(data5),n=10)
+
+diags<-NULL 
+for(i in 1:k){
+  train<-data5[folds!=i,] 
+  test<-data5[folds==i,]
+  truth <- test$smoker
+  fit6<-glm(smoker~age+region+charges+children, data=train, family="binomial") 
+  probs3 <- predict(fit6, newdata=test, type="response")
+  yhat<-predict(fit6,newdata=test)
+  diags<-rbind(diags,class_diag(probs3,truth))
+}
+diags%>%summarize_all(mean)
+```
+From LASSO, the variables charges and age are retained. This model had Accuracy=0.9028448, Sensitivity=0.7304451, Specificity=0.947426, Precision=0.7904486, and AUC=0.975649. The AUC here is slightly lower than the in-sample AUC. The AUC for out-of-sample did not have an AUC. 
